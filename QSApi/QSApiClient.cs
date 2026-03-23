@@ -68,10 +68,16 @@ namespace QSBT1_Streamdeck.QSApi
         {
             int objStart = FindTuneObjectStart(json, tuneName);
             if (objStart < 0) return false;
-            int enIdx = json.IndexOf("\"enabled\":", objStart, 200, StringComparison.Ordinal);
+            // Search for "enabled": within 800 chars of the tune object
+            int enIdx = json.IndexOf("\"enabled\":", objStart, Math.Min(800, json.Length - objStart), StringComparison.Ordinal);
             if (enIdx < 0) return false;
             int valStart = enIdx + 10;
-            return json.Length > valStart + 4 && json[valStart..].TrimStart().StartsWith("true");
+            // Skip whitespace
+            while (valStart < json.Length && json[valStart] == ' ') valStart++;
+            // Check next 4-5 chars
+            if (valStart + 4 > json.Length) return false;
+            string val = json.Substring(valStart, Math.Min(5, json.Length - valStart)).Trim();
+            return val.StartsWith("true", StringComparison.OrdinalIgnoreCase);
         }
 
         private static int FindTuneObjectStart(string json, string tuneName)

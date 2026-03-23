@@ -7,18 +7,19 @@
       "Name": "Adjust Parameter",
       "UUID": "ch.nutho313.qsbt1.adjust",
       "Icon": "images/action_adjust",
-      "Tooltip": "Increase or decrease a QS-BT1 tune parameter",
+      "Tooltip": "Adjust a QS-BT1 tune parameter. Rotate = ±0.1 | Push = toggle ON/OFF",
       "SupportedInMultiActions": true,
       "Controllers": ["Keypad", "Encoder"],
       "Encoder": {
         "layout": "$B1",
         "TriggerDescription": {
-          "Rotate": "Adjust value",
-          "Push": "Reset to default"
+          "Rotate": "CCW = -step  |  CW = +step",
+          "Push": "Toggle tune ON / OFF",
+          "Touch": "Refresh from device"
         }
       },
       "States": [
-        { "Image": "images/action_adjust", "TitleAlignment": "middle", "FontSize": "14" }
+        { "Image": "images/action_adjust", "TitleAlignment": "middle", "FontSize": "11" }
       ],
       "PropertyInspectorPath": "pi/adjust.html"
     },
@@ -51,7 +52,7 @@
       "Name": "Show Status",
       "UUID": "ch.nutho313.qsbt1.status",
       "Icon": "images/action_status",
-      "Tooltip": "Display current value and enabled state of a tune parameter",
+      "Tooltip": "Display current value and enabled state — polls every second",
       "SupportedInMultiActions": false,
       "Controllers": ["Keypad"],
       "States": [
@@ -62,7 +63,7 @@
   ],
   "Category": "nutho313 QSBT1",
   "CategoryIcon": "images/category",
-  "CodePath": "QSBT1_Streamdeck.exe",
+  "CodePath": "nutho313.QSBT1_Streamdeck.exe",
   "Description": "Control the Qubic System QS-BT1 seat belt tensioner directly from your Stream Deck.",
   "Icon": "images/plugin_icon",
   "URL": "https://www.nutho313.ch",

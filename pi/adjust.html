@@ -8,20 +8,6 @@
 <body>
   <div class="sdpi-wrapper">
 
-    <div class="sdpi-heading">Connection</div>
-    <div type="field" class="sdpi-item">
-      <div class="sdpi-item-label">IP Address</div>
-      <input class="sdpi-item-value" id="ip" type="text" value="192.168.8.131"/>
-    </div>
-    <div type="field" class="sdpi-item">
-      <div class="sdpi-item-label">Port</div>
-      <input class="sdpi-item-value" id="port" type="number" value="8081"/>
-    </div>
-    <div type="field" class="sdpi-item">
-      <div class="sdpi-item-label">Profile ID</div>
-      <input class="sdpi-item-value" id="profileId" type="number" value="276"/>
-    </div>
-
     <div class="sdpi-heading">Tune Parameter</div>
     <div type="field" class="sdpi-item">
       <div class="sdpi-item-label">Tune Name</div>
@@ -31,34 +17,23 @@
       <div class="sdpi-item-label">Parameter</div>
       <select class="sdpi-item-value" id="paramLabel"></select>
     </div>
-    <div type="field" class="sdpi-item">
-      <div class="sdpi-item-label">Tune Group</div>
-      <input class="sdpi-item-value" id="tuneGroup" type="number" readonly/>
-    </div>
-    <div type="field" class="sdpi-item">
-      <div class="sdpi-item-label">Default Value</div>
-      <input class="sdpi-item-value" id="defaultVal" type="number" step="0.1" value="1.0"/>
-    </div>
 
   </div>
 
   <script>
-    // Stream Deck PI communication
     var websocket, uuid, actionInfo, settings = {};
 
     function connectElgatoStreamDeckSocket(port, pluginUUID, registerEvent, info, actionInfo_) {
       uuid       = pluginUUID;
       actionInfo = JSON.parse(actionInfo_);
       settings   = actionInfo.payload.settings || {};
-
-      websocket = new WebSocket('ws://127.0.0.1:' + port);
+      websocket  = new WebSocket('ws://127.0.0.1:' + port);
       websocket.onopen = () => {
         websocket.send(JSON.stringify({ event: registerEvent, uuid }));
         loadSettings();
       };
     }
 
-    // Tune catalog mirrored from TuneModels.cs
     const catalog = [
       {tune:"Braking",group:12,param:"Gain",idx:0,min:0,max:2.5,step:0.1},
       {tune:"Braking",group:12,param:"Sharpness",idx:1,min:0.1,max:2.5,step:0.1},
@@ -120,21 +95,9 @@
         if (p.param === settings.ParamLabel) o.selected = true;
         sel.appendChild(o);
       });
-      updateGroupField();
-    }
-
-    function updateGroupField() {
-      const tune  = document.getElementById('tuneName').value;
-      const param = document.getElementById('paramLabel').value;
-      const entry = catalog.find(c => c.tune === tune && c.param === param);
-      if (entry) document.getElementById('tuneGroup').value = entry.group;
     }
 
     function loadSettings() {
-      document.getElementById('ip').value        = settings.IpAddress  || '192.168.8.131';
-      document.getElementById('port').value      = settings.Port       || 8081;
-      document.getElementById('profileId').value = settings.ProfileId  || 276;
-      document.getElementById('defaultVal').value= settings.DefaultVal || 1.0;
       populateTunes();
     }
 
@@ -143,24 +106,23 @@
       const param = document.getElementById('paramLabel').value;
       const entry = catalog.find(c => c.tune === tune && c.param === param) || {};
       const s = {
-        IpAddress:   document.getElementById('ip').value,
-        Port:        parseInt(document.getElementById('port').value),
-        ProfileId:   parseInt(document.getElementById('profileId').value),
-        TuneName:    tune,
-        TuneGroup:   entry.group  || 12,
-        ParamLabel:  param,
-        ParamIndex:  entry.idx    ?? 0,
-        Min:         entry.min    ?? 0,
-        Max:         entry.max    ?? 2.5,
-        Step:        entry.step   ?? 0.1,
-        DefaultVal:  parseFloat(document.getElementById('defaultVal').value),
+        IpAddress:  settings.IpAddress  || '192.168.8.131',
+        Port:       settings.Port       || 8081,
+        ProfileId:  settings.ProfileId  || 276,
+        TuneName:   tune,
+        TuneGroup:  entry.group  || 12,
+        ParamLabel: param,
+        ParamIndex: entry.idx    ?? 0,
+        Min:        entry.min    ?? 0,
+        Max:        entry.max    ?? 2.5,
+        Step:       entry.step   ?? 0.1,
+        DefaultVal: 0,
       };
       websocket.send(JSON.stringify({ event:'setSettings', context: uuid, payload: s }));
     }
 
-    document.addEventListener('change', saveSettings);
     document.getElementById('tuneName').addEventListener('change', () => { populateParams(); saveSettings(); });
-    document.getElementById('paramLabel').addEventListener('change', () => { updateGroupField(); saveSettings(); });
+    document.getElementById('paramLabel').addEventListener('change', saveSettings);
   </script>
 </body>
 </html>

@@ -47,6 +47,15 @@ namespace QSBT1_Streamdeck.QSApi
             new("Wheel Slip Angle",      17, "Intensity",  1,  0.0,   2.5, 0.1),
             new("ABS Active",            17, "Frequency",  0,  2.0,  50.0, 1.0),
             new("ABS Active",            17, "Intensity",  1,  0.0,   2.5, 0.1),
+            new("Rumble Strips Frequency",  17, "At 20kmh",  0,  2.0, 50.0, 1.0),
+            new("Rumble Strips Frequency",  17, "At 300kmh", 1,  2.0, 50.0, 1.0),
+            new("Rumble Strips Intensity",  17, "At 20kmh",  0,  0.0,  2.5, 0.1),
+            new("Rumble Strips Intensity",  17, "At 300kmh", 1,  0.0,  2.5, 0.1),
+            new("Engine Vibration Extra",17, "Phase Shift",0,  0.0, 250.0, 5.0),
+            new("Engine Vibration Extra",17, "Alone",      1,  0.0,   2.5, 0.1),
+            new("Engine Vibration Extra",17, "In-Group",   2,  0.0,   1.0, 0.05),
+            new("LFE Enhancement",       17, "Gain",       0,  0.0,   2.5, 0.1),
+            new("LFE Enhancement",       17, "Sharpness",  1,  0.1,   2.5, 0.1),
         };
 
         public static readonly List<(string TuneName, int TuneGroup)> Toggleable = new()
@@ -58,6 +67,19 @@ namespace QSBT1_Streamdeck.QSApi
             ("Rev Limiter", 17), ("Gear Change Effect", 17), ("Wheel Forward Slip/Lock", 17),
             ("Wheel Slip Angle", 17), ("ABS Active", 17),
             ("Rumble Strips Intensity", 17), ("LFE Enhancement", 17),
+        };
+
+        public static readonly List<(string TuneName, int TuneGroup)> UniqueTunes = new()
+        {
+            ("Braking", 12), ("Acceleration", 12), ("Sideways Acceleration", 12),
+            ("Centrifugal Force", 12), ("Bounds", 12), ("Vertical G-Force", 12),
+            ("Side Slip", 12), ("Road Harshness", 12), ("Pre-Impact Protection", 12),
+            ("Violent Movement Threshold", 2), ("Violent Movement Suppression Time", 2),
+            ("Rev Limiter", 17), ("Gear Change Effect", 17),
+            ("Wheel Forward Slip/Lock", 17), ("Wheel Slip Angle", 17),
+            ("ABS Active", 17), ("Rumble Strips Frequency", 17),
+            ("Rumble Strips Intensity", 17), ("Engine Vibration Extra", 17),
+            ("LFE Enhancement", 17),
         };
     }
 
@@ -74,6 +96,15 @@ namespace QSBT1_Streamdeck.QSApi
         [JsonProperty("Max")]        public double Max        { get; set; } = 2.5;
         [JsonProperty("Step")]       public double Step       { get; set; } = 0.1;
         [JsonProperty("DefaultVal")] public double DefaultVal { get; set; } = 1.0;
+    }
+
+    public class TuneDialSettings
+    {
+        [JsonProperty("IpAddress")]  public string IpAddress  { get; set; } = "192.168.8.131";
+        [JsonProperty("Port")]       public int    Port       { get; set; } = 8081;
+        [JsonProperty("ProfileId")]  public int    ProfileId  { get; set; } = 276;
+        [JsonProperty("TuneName")]   public string TuneName   { get; set; } = "Braking";
+        [JsonProperty("TuneGroup")]  public int    TuneGroup  { get; set; } = 12;
     }
 
     public class ToggleSettings

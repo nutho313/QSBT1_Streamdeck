@@ -1,64 +1,39 @@
 {
   "Name": "nutho313 QSBT1 ControlMapper",
-  "Version": "0.1.0.0",
+  "Version": "0.3.0.0",
   "Author": "nutho313",
   "Actions": [
     {
-      "Name": "Adjust Parameter",
-      "UUID": "ch.nutho313.qsbt1.adjust",
+      "Name": "Tune Dial",
+      "UUID": "ch.nutho313.qsbt1.dial",
       "Icon": "images/action_adjust",
-      "Tooltip": "Adjust a QS-BT1 tune parameter. Rotate = ±0.1 | Push = toggle ON/OFF",
-      "SupportedInMultiActions": true,
+      "Tooltip": "1 dial = 1 tune. Rotate = adjust | Push = toggle ON/OFF | Touch = cycle parameter",
+      "SupportedInMultiActions": false,
       "Controllers": ["Keypad", "Encoder"],
       "Encoder": {
-        "layout": "$B1",
+        "layout": "$A0",
         "TriggerDescription": {
           "Rotate": "CCW = -step  |  CW = +step",
-          "Push": "Toggle tune ON / OFF",
-          "Touch": "Refresh from device"
+          "Push":   "Toggle tune ON / OFF",
+          "Touch":  "Cycle selected parameter"
         }
       },
       "States": [
-        { "Image": "images/action_adjust", "TitleAlignment": "middle", "FontSize": "11" }
+        { "Image": "images/action_adjust", "Title": " " }
       ],
-      "PropertyInspectorPath": "pi/adjust.html"
+      "PropertyInspectorPath": "pi/dial.html"
     },
     {
-      "Name": "Toggle Tune",
-      "UUID": "ch.nutho313.qsbt1.toggle",
-      "Icon": "images/action_toggle",
-      "Tooltip": "Enable or disable a QS-BT1 tune",
-      "SupportedInMultiActions": true,
-      "Controllers": ["Keypad"],
-      "States": [
-        { "Image": "images/state_off", "Name": "Disabled" },
-        { "Image": "images/state_on",  "Name": "Enabled" }
-      ],
-      "PropertyInspectorPath": "pi/toggle.html"
-    },
-    {
-      "Name": "Activate Profile",
-      "UUID": "ch.nutho313.qsbt1.profile",
-      "Icon": "images/action_profile",
-      "Tooltip": "Activate a QS-BT1 profile",
-      "SupportedInMultiActions": true,
-      "Controllers": ["Keypad"],
-      "States": [
-        { "Image": "images/action_profile", "TitleAlignment": "middle", "FontSize": "12" }
-      ],
-      "PropertyInspectorPath": "pi/profile.html"
-    },
-    {
-      "Name": "Show Status",
-      "UUID": "ch.nutho313.qsbt1.status",
+      "Name": "Tune Button",
+      "UUID": "ch.nutho313.qsbt1.button",
       "Icon": "images/action_status",
-      "Tooltip": "Display current value and enabled state — polls every second",
+      "Tooltip": "Short press = +step | Long press = -step | Double press = cycle parameter. Shows all tune values, auto-refresh every 3s.",
       "SupportedInMultiActions": false,
       "Controllers": ["Keypad"],
       "States": [
-        { "Image": "images/action_status", "TitleAlignment": "middle", "FontSize": "11" }
+        { "Image": "images/action_status", "Title": " " }
       ],
-      "PropertyInspectorPath": "pi/status.html"
+      "PropertyInspectorPath": "pi/dial.html"
     }
   ],
   "Category": "nutho313 QSBT1",

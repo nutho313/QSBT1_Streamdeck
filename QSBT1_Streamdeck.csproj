@@ -2,15 +2,17 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
-	<AssemblyName>nutho313.QSBT1_Streamdeck</AssemblyName>
+    <AssemblyName>nutho313.QSBT1_Streamdeck</AssemblyName>
     <RootNamespace>QSBT1_Streamdeck</RootNamespace>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="StreamDeck-Tools" Version="6.4.0" />
-    <PackageReference Include="Newtonsoft.Json"  Version="13.0.4" />
+    <PackageReference Include="StreamDeck-Tools"              Version="6.4.0" />
+    <PackageReference Include="Newtonsoft.Json"               Version="13.0.4" />
+    <PackageReference Include="SkiaSharp"                     Version="2.88.8" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32"  Version="2.88.8" />
   </ItemGroup>
 
   <ItemGroup>

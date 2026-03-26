@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Tune Dial</title>
+  <link rel="stylesheet" href="sdpi.css"/>
+</head>
+<body>
+  <div class="sdpi-wrapper">
+
+    <div class="sdpi-heading">Tune</div>
+    <div type="field" class="sdpi-item">
+      <div class="sdpi-item-label">Tune Name</div>
+      <select class="sdpi-item-value" id="tuneName"></select>
+    </div>
+
+    <div class="sdpi-heading" style="font-size:10px;color:#888;margin-top:8px;">
+      Touch LCD = cycle parameter · Push = toggle ON/OFF
+    </div>
+
+  </div>
+  <script>
+    var websocket, uuid, settings = {};
+
+    function connectElgatoStreamDeckSocket(port, pluginUUID, registerEvent, info, actionInfo_) {
+      uuid     = pluginUUID;
+      settings = JSON.parse(actionInfo_).payload.settings || {};
+      websocket = new WebSocket('ws://127.0.0.1:' + port);
+      websocket.onopen = () => {
+        websocket.send(JSON.stringify({ event: registerEvent, uuid }));
+        loadSettings();
+      };
+    }
+
+    const tunes = [
+      {name:"Braking",group:12},
+      {name:"Acceleration",group:12},
+      {name:"Sideways Acceleration",group:12},
+      {name:"Centrifugal Force",group:12},
+      {name:"Bounds",group:12},
+      {name:"Vertical G-Force",group:12},
+      {name:"Side Slip",group:12},
+      {name:"Road Harshness",group:12},
+      {name:"Pre-Impact Protection",group:12},
+      {name:"Violent Movement Threshold",group:2},
+      {name:"Violent Movement Suppression Time",group:2},
+      {name:"Rev Limiter",group:17},
+      {name:"Gear Change Effect",group:17},
+      {name:"Wheel Forward Slip/Lock",group:17},
+      {name:"Wheel Slip Angle",group:17},
+      {name:"ABS Active",group:17},
+      {name:"Rumble Strips Frequency",group:17},
+      {name:"Rumble Strips Intensity",group:17},
+      {name:"Engine Vibration Extra",group:17},
+      {name:"LFE Enhancement",group:17},
+    ];
+
+    function loadSettings() {
+      const sel = document.getElementById('tuneName');
+      sel.innerHTML = '';
+      tunes.forEach(t => {
+        const o = document.createElement('option');
+        o.value = t.name; o.text = t.name;
+        if (t.name === settings.TuneName) o.selected = true;
+        sel.appendChild(o);
+      });
+    }
+
+    function save() {
+      const name  = document.getElementById('tuneName').value;
+      const entry = tunes.find(t => t.name === name) || { group: 12 };
+      websocket.send(JSON.stringify({ event:'setSettings', context: uuid, payload: {
+        IpAddress: settings.IpAddress || '192.168.8.131',
+        Port:      settings.Port      || 8081,
+        ProfileId: settings.ProfileId || 276,
+        TuneName:  name,
+        TuneGroup: entry.group,
+      }}));
+    }
+
+    document.addEventListener('change', save);
+  </script>
+</body>
+</html>

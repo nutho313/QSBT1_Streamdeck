@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>Tune Dial</title>
+  <title>Tune Dial / Button</title>
   <link rel="stylesheet" href="sdpi.css"/>
 </head>
 <body>
@@ -14,11 +14,8 @@
       <select class="sdpi-item-value" id="tuneName"></select>
     </div>
 
-    <div class="sdpi-heading" style="font-size:10px;color:#888;margin-top:8px;">
-      Touch LCD = cycle parameter · Push = toggle ON/OFF
-    </div>
-
   </div>
+
   <script>
     var websocket, uuid, settings = {};
 
@@ -69,10 +66,7 @@
     function save() {
       const name  = document.getElementById('tuneName').value;
       const entry = tunes.find(t => t.name === name) || { group: 12 };
-      websocket.send(JSON.stringify({ event:'setSettings', context: uuid, payload: {
-        IpAddress: settings.IpAddress || '192.168.8.131',
-        Port:      settings.Port      || 8081,
-        ProfileId: settings.ProfileId || 276,
+      websocket.send(JSON.stringify({ event: 'setSettings', context: uuid, payload: {
         TuneName:  name,
         TuneGroup: entry.group,
       }}));

@@ -1,9 +1,4 @@
 bin/
 obj/
 .vs/
-*.user
-*.suo
-*.dll
-*.exe
-*.pdb
 releases/

@@ -11,8 +11,15 @@ namespace QSBT1_Streamdeck.QSApi
         private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(4) };
         private readonly string _base;
 
-        public QSApiClient(string ip, int port) =>
-            _base = $"http://{ip}:{port}";
+        public string IpAddress { get; set; }
+        public int    Port      { get; set; }
+
+        public QSApiClient(string ip = "192.168.8.131", int port = 8081)
+        {
+            IpAddress = ip;
+            Port      = port;
+            _base     = $"http://{ip}:{port}";
+        }
 
         // ── Read ─────────────────────────────────────────────────────────────
         public async Task<string?> GetProfileDetailsAsync(int profileId)
@@ -21,15 +28,19 @@ namespace QSBT1_Streamdeck.QSApi
             catch { return null; }
         }
 
+        public async Task<string?> GetRawProfilesAsync()
+        {
+            try { return await _http.GetStringAsync($"{_base}/api/profilesInstalled"); }
+            catch { return null; }
+        }
+
         public async Task<int> GetActiveProfileIdAsync()
         {
             try
             {
                 var json = await _http.GetStringAsync($"{_base}/api/profilesInstalled");
-                // Find first "is_active":true and grab its id
                 int idx = json.IndexOf("\"is_active\":true", StringComparison.Ordinal);
                 if (idx < 0) return -1;
-                // Walk back to find "id":
                 int idIdx = json.LastIndexOf("\"id\":", idx, StringComparison.Ordinal);
                 if (idIdx < 0) return -1;
                 int start = idIdx + 5;
@@ -57,7 +68,7 @@ namespace QSBT1_Streamdeck.QSApi
                 int end   = (comma >= 0 && comma < close) ? comma : close;
                 if (end < 0) break;
                 if (i == index)
-                    return double.TryParse(json[cur..end].Trim(), System.Globalization.NumberStyles.Any, ic, out double v) ? v : 0;
+                    return double.TryParse(json[cur..end].Trim(), NumberStyles.Any, ic, out double v) ? v : 0;
                 cur = end + 1;
                 i++;
             }
@@ -68,13 +79,10 @@ namespace QSBT1_Streamdeck.QSApi
         {
             int objStart = FindTuneObjectStart(json, tuneName);
             if (objStart < 0) return false;
-            // Search for "enabled": within 800 chars of the tune object
             int enIdx = json.IndexOf("\"enabled\":", objStart, Math.Min(800, json.Length - objStart), StringComparison.Ordinal);
             if (enIdx < 0) return false;
             int valStart = enIdx + 10;
-            // Skip whitespace
             while (valStart < json.Length && json[valStart] == ' ') valStart++;
-            // Check next 4-5 chars
             if (valStart + 4 > json.Length) return false;
             string val = json.Substring(valStart, Math.Min(5, json.Length - valStart)).Trim();
             return val.StartsWith("true", StringComparison.OrdinalIgnoreCase);

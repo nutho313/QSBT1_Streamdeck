@@ -1,6 +1,6 @@
 {
   "Name": "nutho313 QSBT1 ControlMapper",
-  "Version": "0.3.0.0",
+  "Version": "0.6.0.0",
   "Author": "nutho313",
   "Actions": [
     {
@@ -18,22 +18,28 @@
           "Touch":  "Cycle selected parameter"
         }
       },
-      "States": [
-        { "Image": "images/action_adjust", "Title": " " }
-      ],
+      "States": [{ "Image": "images/action_adjust", "Title": " " }],
       "PropertyInspectorPath": "pi/dial.html"
     },
     {
       "Name": "Tune Button",
       "UUID": "ch.nutho313.qsbt1.button",
       "Icon": "images/action_status",
-      "Tooltip": "Short press = +step | Long press = -step | Double press = cycle parameter. Shows all tune values, auto-refresh every 3s.",
+      "Tooltip": "1 press = +step | 2 presses = -step | Hold 1s = next param | Hold 3s = toggle ON/OFF",
       "SupportedInMultiActions": false,
       "Controllers": ["Keypad"],
-      "States": [
-        { "Image": "images/action_status", "Title": " " }
-      ],
+      "States": [{ "Image": "images/action_status", "Title": " " }],
       "PropertyInspectorPath": "pi/dial.html"
+    },
+    {
+      "Name": "Profile Button",
+      "UUID": "ch.nutho313.qsbt1.profilebutton",
+      "Icon": "images/action_profile",
+      "Tooltip": "Press = activate next profile in rotation.",
+      "SupportedInMultiActions": false,
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "images/action_profile", "Title": " " }],
+      "PropertyInspectorPath": "pi/profile_button.html"
     }
   ],
   "Category": "nutho313 QSBT1",
@@ -44,5 +50,6 @@
   "URL": "https://www.nutho313.ch",
   "SDKVersion": 2,
   "Software": { "MinimumVersion": "6.0" },
-  "OS": [{ "Platform": "windows", "MinimumVersion": "10" }]
+  "OS": [{ "Platform": "windows", "MinimumVersion": "10" }],
+  "GlobalPropertyInspectorPath": "pi/plugin_global.html"
 }

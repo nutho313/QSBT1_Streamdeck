@@ -57,81 +57,20 @@ namespace QSBT1_Streamdeck.QSApi
             new("LFE Enhancement",       17, "Gain",       0,  0.0,   2.5, 0.1),
             new("LFE Enhancement",       17, "Sharpness",  1,  0.1,   2.5, 0.1),
         };
-
-        public static readonly List<(string TuneName, int TuneGroup)> Toggleable = new()
-        {
-            ("Braking", 12), ("Acceleration", 12), ("Sideways Acceleration", 12),
-            ("Centrifugal Force", 12), ("Bounds", 12), ("Vertical G-Force", 12),
-            ("Side Slip", 12), ("Road Harshness", 12), ("Pre-Impact Protection", 12),
-            ("Violent Movement Threshold", 2),
-            ("Rev Limiter", 17), ("Gear Change Effect", 17), ("Wheel Forward Slip/Lock", 17),
-            ("Wheel Slip Angle", 17), ("ABS Active", 17),
-            ("Rumble Strips Intensity", 17), ("LFE Enhancement", 17),
-        };
-
-        public static readonly List<(string TuneName, int TuneGroup)> UniqueTunes = new()
-        {
-            ("Braking", 12), ("Acceleration", 12), ("Sideways Acceleration", 12),
-            ("Centrifugal Force", 12), ("Bounds", 12), ("Vertical G-Force", 12),
-            ("Side Slip", 12), ("Road Harshness", 12), ("Pre-Impact Protection", 12),
-            ("Violent Movement Threshold", 2), ("Violent Movement Suppression Time", 2),
-            ("Rev Limiter", 17), ("Gear Change Effect", 17),
-            ("Wheel Forward Slip/Lock", 17), ("Wheel Slip Angle", 17),
-            ("ABS Active", 17), ("Rumble Strips Frequency", 17),
-            ("Rumble Strips Intensity", 17), ("Engine Vibration Extra", 17),
-            ("LFE Enhancement", 17),
-        };
     }
 
-    public class AdjustSettings
+    // Global settings — IP + Port partagés entre toutes les actions
+    // Stockés via setGlobalSettings / getGlobalSettings du SDK
+    public class GlobalPluginSettings
     {
-        [JsonProperty("IpAddress")]  public string IpAddress  { get; set; } = "192.168.8.131";
-        [JsonProperty("Port")]       public int    Port       { get; set; } = 8081;
-        [JsonProperty("ProfileId")]  public int    ProfileId  { get; set; } = 276;
-        [JsonProperty("TuneName")]   public string TuneName   { get; set; } = "Braking";
-        [JsonProperty("TuneGroup")]  public int    TuneGroup  { get; set; } = 12;
-        [JsonProperty("ParamLabel")] public string ParamLabel { get; set; } = "Gain";
-        [JsonProperty("ParamIndex")] public int    ParamIndex { get; set; } = 0;
-        [JsonProperty("Min")]        public double Min        { get; set; } = 0.0;
-        [JsonProperty("Max")]        public double Max        { get; set; } = 2.5;
-        [JsonProperty("Step")]       public double Step       { get; set; } = 0.1;
-        [JsonProperty("DefaultVal")] public double DefaultVal { get; set; } = 1.0;
+        [JsonProperty("IpAddress")] public string IpAddress { get; set; } = "";
+        [JsonProperty("Port")]      public int    Port      { get; set; } = 8081;
     }
 
+    // Per-action settings pour Tune Dial et Tune Button — juste le tune
     public class TuneDialSettings
     {
-        [JsonProperty("IpAddress")]  public string IpAddress  { get; set; } = "192.168.8.131";
-        [JsonProperty("Port")]       public int    Port       { get; set; } = 8081;
-        [JsonProperty("ProfileId")]  public int    ProfileId  { get; set; } = 276;
-        [JsonProperty("TuneName")]   public string TuneName   { get; set; } = "Braking";
-        [JsonProperty("TuneGroup")]  public int    TuneGroup  { get; set; } = 12;
-    }
-
-    public class ToggleSettings
-    {
-        [JsonProperty("IpAddress")] public string IpAddress { get; set; } = "192.168.8.131";
-        [JsonProperty("Port")]      public int    Port      { get; set; } = 8081;
-        [JsonProperty("ProfileId")] public int    ProfileId { get; set; } = 276;
         [JsonProperty("TuneName")]  public string TuneName  { get; set; } = "Braking";
         [JsonProperty("TuneGroup")] public int    TuneGroup { get; set; } = 12;
-    }
-
-    public class ProfileSettings
-    {
-        [JsonProperty("IpAddress")]   public string IpAddress   { get; set; } = "192.168.8.131";
-        [JsonProperty("Port")]        public int    Port        { get; set; } = 8081;
-        [JsonProperty("ProfileId")]   public int    ProfileId   { get; set; } = 276;
-        [JsonProperty("ProfileName")] public string ProfileName { get; set; } = "My Profile";
-    }
-
-    public class StatusSettings
-    {
-        [JsonProperty("IpAddress")]  public string IpAddress  { get; set; } = "192.168.8.131";
-        [JsonProperty("Port")]       public int    Port       { get; set; } = 8081;
-        [JsonProperty("ProfileId")]  public int    ProfileId  { get; set; } = 276;
-        [JsonProperty("TuneName")]   public string TuneName   { get; set; } = "Braking";
-        [JsonProperty("TuneGroup")]  public int    TuneGroup  { get; set; } = 12;
-        [JsonProperty("ParamLabel")] public string ParamLabel { get; set; } = "Gain";
-        [JsonProperty("ParamIndex")] public int    ParamIndex { get; set; } = 0;
     }
 }

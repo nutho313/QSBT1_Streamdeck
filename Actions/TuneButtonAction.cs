@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using BarRaider.SdTools;
 using BarRaider.SdTools.Payloads;
@@ -10,19 +11,22 @@ namespace QSBT1_Streamdeck.Actions
     [PluginActionId("ch.nutho313.qsbt1.button")]
     public class TuneButtonAction : KeypadBase
     {
-        private TuneDialSettings  _s            = new();
+        private TuneDialSettings  _s             = new();
         private QSApiClient?      _qsApi;
-        private bool              _enabled      = true;
-        private bool              _isBusy       = false;
-        private int               _tickCount    = 0;
-        private int               _selectedParam= 0;
-        private List<ParamState>  _params       = new();
+        private bool              _enabled       = true;
+        private bool              _isBusy        = false;
+        private int               _tickCount     = 0;
+        private int               _selectedParam = 0;
+        private int               _activeProfileId = 0;
+        private List<ParamState>  _params        = new();
 
-        // Press detection
-        private DateTime          _keyDownTime  = DateTime.MinValue;
-        private DateTime          _lastRelease  = DateTime.MinValue;
-        private const int         DoublePressMs = 350;
-        private const int         LongPressMs   = 500;
+        private DateTime          _keyDownTime    = DateTime.MinValue;
+        private int               _pressCount     = 0;
+        private DateTime          _lastShortPress = DateTime.MinValue;
+        private const int         ConsecMs        = 600;
+        private const int         LongPress1s     = 1000;
+        private const int         LongPress3s     = 3000;
+        private CancellationTokenSource? _longPressCts;
 
         private class ParamState
         {
@@ -37,60 +41,91 @@ namespace QSBT1_Streamdeck.Actions
         public TuneButtonAction(SDConnection conn, InitialPayload payload) : base(conn, payload)
         {
             _ = Connection.SetTitleAsync(" ");
-            if (payload.Settings == null || payload.Settings.Count == 0) return;
-            _s     = payload.Settings.ToObject<TuneDialSettings>() ?? new();
-            _qsApi = new QSApiClient(_s.IpAddress, _s.Port);
+            _ = ShowPlaceholderAsync();
+
+            if (payload.Settings != null && payload.Settings.Count > 0)
+                _s = payload.Settings.ToObject<TuneDialSettings>() ?? new();
+
+            // Demander les global settings (IP/Port)
+            Connection.GetGlobalSettingsAsync();
+
             BuildParamList();
-            _ = RefreshAsync();
         }
 
         public override void ReceivedSettings(ReceivedSettingsPayload payload)
         {
-            _s     = payload.Settings.ToObject<TuneDialSettings>() ?? _s;
-            _qsApi = new QSApiClient(_s.IpAddress, _s.Port);
+            _s = payload.Settings.ToObject<TuneDialSettings>() ?? _s;
             BuildParamList();
             _ = RefreshAsync();
         }
 
-        // ── Press detection ──────────────────────────────────────────────────
+        public override void ReceivedGlobalSettings(ReceivedGlobalSettingsPayload payload)
+        {
+            var gs = payload.Settings.ToObject<GlobalPluginSettings>() ?? new();
+
+            if (string.IsNullOrWhiteSpace(gs.IpAddress))
+                gs.IpAddress = QSGlobalSettings.DetectLocalIp();
+
+            QSGlobalSettings.Update(gs);
+            _qsApi = new QSApiClient(gs.IpAddress, gs.Port);
+            _ = RefreshAsync();
+        }
+
         public override void KeyPressed(KeyPayload payload)
         {
             _keyDownTime = DateTime.Now;
+            _longPressCts?.Cancel();
+            _longPressCts = new CancellationTokenSource();
+            var cts = _longPressCts;
+
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(LongPress1s, cts.Token);
+                    _ = CycleParamAsync();
+                    await Task.Delay(LongPress3s - LongPress1s, cts.Token);
+                    _ = ToggleEnabledAsync();
+                }
+                catch (TaskCanceledException) { }
+            });
         }
 
         public override void KeyReleased(KeyPayload payload)
         {
-            var now     = DateTime.Now;
-            var held    = (now - _keyDownTime).TotalMilliseconds;
-            var sinceLastRelease = (now - _lastRelease).TotalMilliseconds;
-            _lastRelease = now;
+            var held = (DateTime.Now - _keyDownTime).TotalMilliseconds;
+            _longPressCts?.Cancel();
 
-            if (sinceLastRelease < DoublePressMs && held < LongPressMs)
+            if (held < LongPress1s)
             {
-                // Double press — cycle parameter
-                _ = CycleParamAsync();
-            }
-            else if (held >= LongPressMs)
-            {
-                // Long press — decrease
-                _ = AdjustAsync(-GetStep());
+                var sinceLastShort = (DateTime.Now - _lastShortPress).TotalMilliseconds;
+                if (sinceLastShort < ConsecMs && _pressCount >= 1)
+                {
+                    _pressCount     = 0;
+                    _lastShortPress = DateTime.MinValue;
+                    _ = AdjustAsync(-GetStep());
+                }
+                else
+                {
+                    _pressCount     = 1;
+                    _lastShortPress = DateTime.Now;
+                    _ = AdjustAsync(+GetStep());
+                }
             }
             else
             {
-                // Short press — increase
-                _ = AdjustAsync(+GetStep());
+                _pressCount     = 0;
+                _lastShortPress = DateTime.MinValue;
             }
         }
 
-        // ── Tick — poll every 3s ─────────────────────────────────────────────
         public override void OnTick()
         {
             _tickCount++;
             if (_tickCount >= 3) { _tickCount = 0; if (!_isBusy) _ = RefreshAsync(); }
         }
 
-        public override void ReceivedGlobalSettings(ReceivedGlobalSettingsPayload payload) { }
-        public override void Dispose() { }
+        public override void Dispose() { _longPressCts?.Cancel(); }
 
         // ── Helpers ──────────────────────────────────────────────────────────
         private void BuildParamList()
@@ -112,11 +147,42 @@ namespace QSBT1_Streamdeck.Actions
         private double GetStep() =>
             _selectedParam < _params.Count ? _params[_selectedParam].Step : 0.1;
 
+        private async Task EnsureProfileIdAsync()
+        {
+            if (_activeProfileId <= 0 && _qsApi != null)
+                _activeProfileId = await _qsApi.GetActiveProfileIdAsync();
+        }
+
+        private async Task ShowPlaceholderAsync()
+        {
+            string img = TuneDialRenderer.RenderStatus(
+                _s.TuneName.Length > 0 ? _s.TuneName : "No tune",
+                false,
+                new List<TuneDialRenderer.ParamDisplay>());
+            await Connection.SetImageAsync(img);
+        }
+
         private async Task CycleParamAsync()
         {
             if (_params.Count > 1)
                 _selectedParam = (_selectedParam + 1) % _params.Count;
             await UpdateDisplayAsync();
+        }
+
+        private async Task ToggleEnabledAsync()
+        {
+            if (_qsApi == null) return;
+            _isBusy = true;
+            try
+            {
+                await EnsureProfileIdAsync();
+                var json = await _qsApi.GetProfileDetailsAsync(_activeProfileId);
+                if (json != null) _enabled = QSApiClient.GetTuneEnabled(json, _s.TuneName);
+                _enabled = !_enabled;
+                await _qsApi.EditTuneEnabledAsync(_activeProfileId, _s.TuneGroup, _s.TuneName, _enabled);
+                await UpdateDisplayAsync();
+            }
+            finally { _isBusy = false; }
         }
 
         private async Task AdjustAsync(double delta)
@@ -125,13 +191,13 @@ namespace QSBT1_Streamdeck.Actions
             _isBusy = true;
             try
             {
+                await EnsureProfileIdAsync();
                 var cur = _params[_selectedParam];
                 cur.Value = Math.Clamp(Math.Round(cur.Value + delta, 2), cur.Min, cur.Max);
-
                 double v0 = _params.Count > 0 ? _params[0].Value : 0;
                 double v1 = _params.Count > 1 ? _params[1].Value : 0;
                 double v2 = _params.Count > 2 ? _params[2].Value : 0;
-                await _qsApi.EditTuneAsync(_s.ProfileId, _s.TuneGroup, _s.TuneName, v0, v1, v2);
+                await _qsApi.EditTuneAsync(_activeProfileId, _s.TuneGroup, _s.TuneName, v0, v1, v2);
                 await UpdateDisplayAsync();
             }
             finally { _isBusy = false; }
@@ -139,12 +205,19 @@ namespace QSBT1_Streamdeck.Actions
 
         private async Task RefreshAsync()
         {
-            if (_qsApi == null) return;
-            var json = await _qsApi.GetProfileDetailsAsync(_s.ProfileId);
-            if (json == null) return;
+            if (_qsApi == null) { await ShowPlaceholderAsync(); return; }
+
+            // Toujours re-détecter le profil actif
+            _activeProfileId = await _qsApi.GetActiveProfileIdAsync();
+            if (_activeProfileId <= 0) { await ShowPlaceholderAsync(); return; }
+
+            var json = await _qsApi.GetProfileDetailsAsync(_activeProfileId);
+            if (json == null) { await ShowPlaceholderAsync(); return; }
+
             _enabled = QSApiClient.GetTuneEnabled(json, _s.TuneName);
             foreach (var p in _params)
                 p.Value = Math.Round(QSApiClient.GetTuneValue(json, _s.TuneName, p.Index), 2);
+
             await UpdateDisplayAsync();
         }
 
@@ -157,7 +230,6 @@ namespace QSBT1_Streamdeck.Actions
                 displays.Add(new TuneDialRenderer.ParamDisplay(
                     p.Label, p.Value, p.Min, p.Max, _enabled, Selected: i == _selectedParam));
             }
-
             string img = TuneDialRenderer.RenderStatus(_s.TuneName, _enabled, displays);
             await Connection.SetImageAsync(img);
         }

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Profile Button</title>
+  <link rel="stylesheet" href="sdpi.css"/>
+</head>
+<body>
+  <div class="sdpi-wrapper">
+    <div class="sdpi-heading">Profile Button</div>
+    <div type="field" class="sdpi-item">
+      <div class="sdpi-item-label" style="width:100%;color:#aaa;font-size:11px;">
+        IP &amp; Port are configured in<br/>
+        Stream Deck → Preferences → Plugins
+      </div>
+    </div>
+  </div>
+  <script>
+    function connectElgatoStreamDeckSocket(port, pluginUUID, registerEvent, info, actionInfo_) {
+      const ws = new WebSocket('ws://127.0.0.1:' + port);
+      ws.onopen = () => ws.send(JSON.stringify({ event: registerEvent, uuid: pluginUUID }));
+    }
+  </script>
+</body>
+</html>

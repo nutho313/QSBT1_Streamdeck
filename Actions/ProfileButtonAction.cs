@@ -11,10 +11,11 @@ namespace QSBT1_Streamdeck.Actions
     [PluginActionId("ch.nutho313.qsbt1.profilebutton")]
     public class ProfileButtonAction : KeypadBase
     {
-        private QSApiClient?        _qsApi;
-        private int                 _tickCount = 0;
-        private List<QSProfile>     _profiles  = new();
-        private int                 _activeIdx = 0;
+        private ProfileButtonSettings _s         = new();
+        private QSApiClient?          _qsApi;
+        private int                   _tickCount = 0;
+        private List<QSProfile>       _profiles  = new();
+        private int                   _activeIdx = 0;
 
         private class QSProfile
         {
@@ -26,19 +27,21 @@ namespace QSBT1_Streamdeck.Actions
         public ProfileButtonAction(SDConnection conn, InitialPayload payload) : base(conn, payload)
         {
             _ = Connection.SetTitleAsync(" ");
-            // Demander les global settings (IP/Port)
+            if (payload.Settings != null && payload.Settings.Count > 0)
+                _s = payload.Settings.ToObject<ProfileButtonSettings>() ?? new();
             Connection.GetGlobalSettingsAsync();
         }
 
-        public override void ReceivedSettings(ReceivedSettingsPayload payload) { }
+        public override void ReceivedSettings(ReceivedSettingsPayload payload)
+        {
+            _s = payload.Settings.ToObject<ProfileButtonSettings>() ?? _s;
+        }
 
         public override void ReceivedGlobalSettings(ReceivedGlobalSettingsPayload payload)
         {
             var gs = payload.Settings.ToObject<GlobalPluginSettings>() ?? new();
-
             if (string.IsNullOrWhiteSpace(gs.IpAddress))
                 gs.IpAddress = QSGlobalSettings.DetectLocalIp();
-
             QSGlobalSettings.Update(gs);
             _qsApi = new QSApiClient(gs.IpAddress, gs.Port);
             _ = RefreshAsync();
@@ -71,7 +74,6 @@ namespace QSBT1_Streamdeck.Actions
             }
 
             await UpdateDisplayAsync();
-
             await Task.Delay(600);
             await RefreshAsync();
         }
@@ -116,7 +118,7 @@ namespace QSBT1_Streamdeck.Actions
             if (_profiles.Count == 0)
             {
                 await Connection.SetImageAsync(
-                    TuneDialRenderer.RenderProfileButton("No profiles", "", false));
+                    TuneDialRenderer.RenderProfileButton("—", "—", false));
                 return;
             }
 

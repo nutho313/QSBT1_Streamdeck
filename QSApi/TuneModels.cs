@@ -67,10 +67,24 @@ namespace QSBT1_Streamdeck.QSApi
         [JsonProperty("Port")]      public int    Port      { get; set; } = 8081;
     }
 
-    // Per-action settings pour Tune Dial et Tune Button — juste le tune
+    // Per-action settings pour Tune Dial et Tune Button
     public class TuneDialSettings
     {
         [JsonProperty("TuneName")]  public string TuneName  { get; set; } = "Braking";
         [JsonProperty("TuneGroup")] public int    TuneGroup { get; set; } = 12;
+    }
+
+    // Per-action settings pour Single Tune
+    public class SingleTuneSettings
+    {
+        [JsonProperty("TuneName")]   public string TuneName   { get; set; } = "Braking";
+        [JsonProperty("TuneGroup")]  public int    TuneGroup  { get; set; } = 12;
+        [JsonProperty("ParamIndex")] public int    ParamIndex { get; set; } = 0;
+    }
+
+    // Per-action settings pour Profile Button
+    public class ProfileButtonSettings
+    {
+        [JsonProperty("StartProfileId")] public int StartProfileId { get; set; } = 0;
     }
 }

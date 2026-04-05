@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Single Tune</title>
+  <link rel="stylesheet" href="pi_style.css"/>
+</head>
+<body>
+<div class="pi-wrapper">
+
+  <div class="pi-title">Single Tune</div>
+
+  <div class="pi-row">
+    <span class="pi-label">Tune</span>
+    <select class="pi-select" id="tuneName" onchange="onTuneChange()"></select>
+  </div>
+
+  <div class="pi-row">
+    <span class="pi-label">Parameter</span>
+    <select class="pi-select" id="paramIndex"></select>
+  </div>
+
+  <hr class="pi-sep"/>
+
+  <div class="pi-desc">
+    <span class="o">1 press</span> → +step &nbsp;·&nbsp; <span class="o">2 presses</span> → −step<br/>
+    <span class="o">Hold 1s</span> → toggle header ON/OFF<br/>
+    <span class="b">Header selected</span> → press = toggle tune ON/OFF
+  </div>
+
+</div>
+<script>
+var websocket, uuid, settings = {};
+
+function connectElgatoStreamDeckSocket(port, pluginUUID, registerEvent, info, actionInfo_) {
+  uuid     = pluginUUID;
+  settings = JSON.parse(actionInfo_).payload.settings || {};
+  websocket = new WebSocket('ws://127.0.0.1:' + port);
+  websocket.onopen = () => {
+    websocket.send(JSON.stringify({ event: registerEvent, uuid }));
+    loadSettings();
+  };
+}
+
+const catalog = [
+  {name:"Braking",               group:12, params:[{label:"Gain",idx:0},{label:"Sharpness",idx:1},{label:"Deadzone",idx:2}]},
+  {name:"Acceleration",          group:12, params:[{label:"Gain",idx:0},{label:"Sharpness",idx:1},{label:"Deadzone",idx:2}]},
+  {name:"Sideways Acceleration", group:12, params:[{label:"Gain",idx:0},{label:"Sharpness",idx:1},{label:"Deadzone",idx:2}]},
+  {name:"Centrifugal Force",     group:12, params:[{label:"Gain",idx:0},{label:"Sharpness",idx:1},{label:"Deadzone",idx:2}]},
+  {name:"Bounds",                group:12, params:[{label:"Neutral",idx:0},{label:"Maximum",idx:1}]},
+  {name:"Vertical G-Force",      group:12, params:[{label:"Gain",idx:0},{label:"Sharpness",idx:1}]},
+  {name:"Side Slip",             group:12, params:[{label:"Threshold",idx:0},{label:"Frequency",idx:1},{label:"Intensity",idx:2}]},
+  {name:"Road Harshness",        group:12, params:[{label:"Gain",idx:0},{label:"Sharpness",idx:1}]},
+  {name:"Pre-Impact Protection", group:12, params:[{label:"Long.",idx:0},{label:"Lateral",idx:1},{label:"Duration",idx:2}]},
+  {name:"Violent Movement Threshold",        group:2, params:[{label:"Threshold",idx:0}]},
+  {name:"Violent Movement Suppression Time", group:2, params:[{label:"Duration",idx:0}]},
+  {name:"Rev Limiter",             group:17, params:[{label:"Frequency",idx:0},{label:"Intensity",idx:1}]},
+  {name:"Gear Change Effect",      group:17, params:[{label:"Duration",idx:0},{label:"Downshift",idx:1},{label:"Upshift",idx:2}]},
+  {name:"Wheel Forward Slip/Lock", group:17, params:[{label:"Frequency",idx:0},{label:"Intensity",idx:1}]},
+  {name:"Wheel Slip Angle",        group:17, params:[{label:"Frequency",idx:0},{label:"Intensity",idx:1}]},
+  {name:"ABS Active",              group:17, params:[{label:"Frequency",idx:0},{label:"Intensity",idx:1}]},
+  {name:"Rumble Strips Frequency", group:17, params:[{label:"At 20kmh",idx:0},{label:"At 300kmh",idx:1}]},
+  {name:"Rumble Strips Intensity", group:17, params:[{label:"At 20kmh",idx:0},{label:"At 300kmh",idx:1}]},
+  {name:"Engine Vibration Extra",  group:17, params:[{label:"Phase Shift",idx:0},{label:"Alone",idx:1},{label:"In-Group",idx:2}]},
+  {name:"LFE Enhancement",         group:17, params:[{label:"Gain",idx:0},{label:"Sharpness",idx:1}]},
+];
+
+function loadSettings() {
+  const tuneSel = document.getElementById('tuneName');
+  tuneSel.innerHTML = '';
+  catalog.forEach(t => {
+    const o = document.createElement('option');
+    o.value = t.name; o.text = t.name;
+    if (t.name === settings.TuneName) o.selected = true;
+    tuneSel.appendChild(o);
+  });
+  populateParams(settings.TuneName, settings.ParamIndex);
+}
+
+function populateParams(tuneName, selectedIdx) {
+  const entry  = catalog.find(t => t.name === tuneName);
+  const params = entry ? entry.params : [];
+  const sel    = document.getElementById('paramIndex');
+  sel.innerHTML = '';
+  params.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p.idx; o.text = p.label;
+    if (p.idx == selectedIdx) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+function onTuneChange() {
+  const name = document.getElementById('tuneName').value;
+  populateParams(name, 0);
+  save();
+}
+
+function save() {
+  const name  = document.getElementById('tuneName').value;
+  const entry = catalog.find(t => t.name === name) || { group: 12 };
+  const pIdx  = parseInt(document.getElementById('paramIndex').value) || 0;
+  websocket.send(JSON.stringify({ event: 'setSettings', context: uuid, payload: {
+    TuneName: name, TuneGroup: entry.group, ParamIndex: pIdx,
+  }}));
+}
+
+document.addEventListener('change', save);
+</script>
+</body>
+</html>

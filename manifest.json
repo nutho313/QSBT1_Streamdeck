@@ -1,6 +1,6 @@
 {
   "Name": "nutho313 QSBT1 ControlMapper",
-  "Version": "0.6.0.0",
+  "Version": "0.7.0.0",
   "Author": "nutho313",
   "Actions": [
     {
@@ -25,11 +25,21 @@
       "Name": "Tune Button",
       "UUID": "ch.nutho313.qsbt1.button",
       "Icon": "images/action_status",
-      "Tooltip": "1 press = +step | 2 presses = -step | Hold 1s = next param | Hold 3s = toggle ON/OFF",
+      "Tooltip": "1 press = +step | 2 presses = -step | Hold 1s = next param | Hold 1s (last) = header toggle ON/OFF",
       "SupportedInMultiActions": false,
       "Controllers": ["Keypad"],
       "States": [{ "Image": "images/action_status", "Title": " " }],
       "PropertyInspectorPath": "pi/dial.html"
+    },
+    {
+      "Name": "Single Tune",
+      "UUID": "ch.nutho313.qsbt1.singletune",
+      "Icon": "images/action_status",
+      "Tooltip": "1 press = +step | 2 presses = -step | Long press = toggle header ON/OFF",
+      "SupportedInMultiActions": false,
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "images/action_status", "Title": " " }],
+      "PropertyInspectorPath": "pi/single_tune.html"
     },
     {
       "Name": "Profile Button",
@@ -40,6 +50,16 @@
       "Controllers": ["Keypad"],
       "States": [{ "Image": "images/action_profile", "Title": " " }],
       "PropertyInspectorPath": "pi/profile_button.html"
+    },
+    {
+      "Name": "Settings",
+      "UUID": "ch.nutho313.qsbt1.settings",
+      "Icon": "images/action_profile",
+      "Tooltip": "Plugin settings: IP, Port, connection test, web interface.",
+      "SupportedInMultiActions": false,
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "images/action_profile", "Title": "SETTINGS" }],
+      "PropertyInspectorPath": "pi/plugin_global.html"
     }
   ],
   "Category": "nutho313 QSBT1",
@@ -50,6 +70,5 @@
   "URL": "https://www.nutho313.ch",
   "SDKVersion": 2,
   "Software": { "MinimumVersion": "6.0" },
-  "OS": [{ "Platform": "windows", "MinimumVersion": "10" }],
-  "GlobalPropertyInspectorPath": "pi/plugin_global.html"
+  "OS": [{ "Platform": "windows", "MinimumVersion": "10" }]
 }

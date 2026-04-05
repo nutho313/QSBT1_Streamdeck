@@ -11,21 +11,26 @@ namespace QSBT1_Streamdeck.Actions
     [PluginActionId("ch.nutho313.qsbt1.button")]
     public class TuneButtonAction : KeypadBase
     {
-        private TuneDialSettings  _s             = new();
+        private TuneDialSettings  _s               = new();
         private QSApiClient?      _qsApi;
-        private bool              _enabled       = true;
-        private bool              _isBusy        = false;
-        private int               _tickCount     = 0;
-        private int               _selectedParam = 0;
+        private bool              _enabled         = true;
+        private bool              _isBusy          = false;
+        private int               _tickCount       = 0;
         private int               _activeProfileId = 0;
-        private List<ParamState>  _params        = new();
+        private List<ParamState>  _params          = new();
 
-        private DateTime          _keyDownTime    = DateTime.MinValue;
-        private int               _pressCount     = 0;
-        private DateTime          _lastShortPress = DateTime.MinValue;
-        private const int         ConsecMs        = 600;
-        private const int         LongPress1s     = 1000;
-        private const int         LongPress3s     = 3000;
+        // _selectedParam : 0..N-1 = param, N = header (toggle mode)
+        private int               _selectedParam   = 0;
+        private bool              OnHeader         => _params.Count > 0 && _selectedParam >= _params.Count;
+
+        // Gestion double appui
+        private DateTime          _lastShortPress  = DateTime.MinValue;
+        private const int         ConsecMs         = 400; // fenêtre double appui
+        private CancellationTokenSource? _pendingCts; // délai avant d'envoyer +step
+
+        // Long press
+        private DateTime          _keyDownTime     = DateTime.MinValue;
+        private const int         LongPressMs      = 1000;
         private CancellationTokenSource? _longPressCts;
 
         private class ParamState
@@ -42,13 +47,9 @@ namespace QSBT1_Streamdeck.Actions
         {
             _ = Connection.SetTitleAsync(" ");
             _ = ShowPlaceholderAsync();
-
             if (payload.Settings != null && payload.Settings.Count > 0)
                 _s = payload.Settings.ToObject<TuneDialSettings>() ?? new();
-
-            // Demander les global settings (IP/Port)
             Connection.GetGlobalSettingsAsync();
-
             BuildParamList();
         }
 
@@ -62,15 +63,14 @@ namespace QSBT1_Streamdeck.Actions
         public override void ReceivedGlobalSettings(ReceivedGlobalSettingsPayload payload)
         {
             var gs = payload.Settings.ToObject<GlobalPluginSettings>() ?? new();
-
             if (string.IsNullOrWhiteSpace(gs.IpAddress))
                 gs.IpAddress = QSGlobalSettings.DetectLocalIp();
-
             QSGlobalSettings.Update(gs);
             _qsApi = new QSApiClient(gs.IpAddress, gs.Port);
             _ = RefreshAsync();
         }
 
+        // ── Key handling ──────────────────────────────────────────────────────
         public override void KeyPressed(KeyPayload payload)
         {
             _keyDownTime = DateTime.Now;
@@ -82,10 +82,11 @@ namespace QSBT1_Streamdeck.Actions
             {
                 try
                 {
-                    await Task.Delay(LongPress1s, cts.Token);
-                    _ = CycleParamAsync();
-                    await Task.Delay(LongPress3s - LongPress1s, cts.Token);
-                    _ = ToggleEnabledAsync();
+                    await Task.Delay(LongPressMs, cts.Token);
+                    // Long press : cycle param (ou header)
+                    _pendingCts?.Cancel(); // annuler tout appui court en attente
+                    CycleParam();
+                    await UpdateDisplayAsync();
                 }
                 catch (TaskCanceledException) { }
             });
@@ -96,26 +97,41 @@ namespace QSBT1_Streamdeck.Actions
             var held = (DateTime.Now - _keyDownTime).TotalMilliseconds;
             _longPressCts?.Cancel();
 
-            if (held < LongPress1s)
+            if (held >= LongPressMs) return; // long press déjà géré
+
+            // Si on est sur le header : appui court = toggle ON/OFF immédiat
+            if (OnHeader)
             {
-                var sinceLastShort = (DateTime.Now - _lastShortPress).TotalMilliseconds;
-                if (sinceLastShort < ConsecMs && _pressCount >= 1)
-                {
-                    _pressCount     = 0;
-                    _lastShortPress = DateTime.MinValue;
-                    _ = AdjustAsync(-GetStep());
-                }
-                else
-                {
-                    _pressCount     = 1;
-                    _lastShortPress = DateTime.Now;
-                    _ = AdjustAsync(+GetStep());
-                }
+                _ = ToggleEnabledAsync();
+                return;
+            }
+
+            // Logique double appui avec délai
+            var sinceLastShort = (DateTime.Now - _lastShortPress).TotalMilliseconds;
+
+            if (sinceLastShort < ConsecMs)
+            {
+                // 2ème appui détecté → annuler le +step en attente, envoyer -step
+                _pendingCts?.Cancel();
+                _lastShortPress = DateTime.MinValue;
+                _ = AdjustAsync(-GetStep());
             }
             else
             {
-                _pressCount     = 0;
-                _lastShortPress = DateTime.MinValue;
+                // 1er appui → attendre ConsecMs avant d'envoyer +step
+                _lastShortPress = DateTime.Now;
+                _pendingCts?.Cancel();
+                _pendingCts = new CancellationTokenSource();
+                var cts = _pendingCts;
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        await Task.Delay(ConsecMs, cts.Token);
+                        _ = AdjustAsync(+GetStep());
+                    }
+                    catch (TaskCanceledException) { }
+                });
             }
         }
 
@@ -125,7 +141,11 @@ namespace QSBT1_Streamdeck.Actions
             if (_tickCount >= 3) { _tickCount = 0; if (!_isBusy) _ = RefreshAsync(); }
         }
 
-        public override void Dispose() { _longPressCts?.Cancel(); }
+        public override void Dispose()
+        {
+            _longPressCts?.Cancel();
+            _pendingCts?.Cancel();
+        }
 
         // ── Helpers ──────────────────────────────────────────────────────────
         private void BuildParamList()
@@ -144,8 +164,15 @@ namespace QSBT1_Streamdeck.Actions
                     });
         }
 
+        // Cycle : param 0 → 1 → 2 → header → param 0 → ...
+        private void CycleParam()
+        {
+            if (_params.Count == 0) return;
+            _selectedParam = (_selectedParam + 1) % (_params.Count + 1); // +1 pour le header
+        }
+
         private double GetStep() =>
-            _selectedParam < _params.Count ? _params[_selectedParam].Step : 0.1;
+            (!OnHeader && _selectedParam < _params.Count) ? _params[_selectedParam].Step : 0.1;
 
         private async Task EnsureProfileIdAsync()
         {
@@ -160,13 +187,6 @@ namespace QSBT1_Streamdeck.Actions
                 false,
                 new List<TuneDialRenderer.ParamDisplay>());
             await Connection.SetImageAsync(img);
-        }
-
-        private async Task CycleParamAsync()
-        {
-            if (_params.Count > 1)
-                _selectedParam = (_selectedParam + 1) % _params.Count;
-            await UpdateDisplayAsync();
         }
 
         private async Task ToggleEnabledAsync()
@@ -187,7 +207,7 @@ namespace QSBT1_Streamdeck.Actions
 
         private async Task AdjustAsync(double delta)
         {
-            if (_params.Count == 0 || _qsApi == null) return;
+            if (_params.Count == 0 || _qsApi == null || OnHeader) return;
             _isBusy = true;
             try
             {
@@ -206,18 +226,13 @@ namespace QSBT1_Streamdeck.Actions
         private async Task RefreshAsync()
         {
             if (_qsApi == null) { await ShowPlaceholderAsync(); return; }
-
-            // Toujours re-détecter le profil actif
             _activeProfileId = await _qsApi.GetActiveProfileIdAsync();
             if (_activeProfileId <= 0) { await ShowPlaceholderAsync(); return; }
-
             var json = await _qsApi.GetProfileDetailsAsync(_activeProfileId);
             if (json == null) { await ShowPlaceholderAsync(); return; }
-
             _enabled = QSApiClient.GetTuneEnabled(json, _s.TuneName);
             foreach (var p in _params)
                 p.Value = Math.Round(QSApiClient.GetTuneValue(json, _s.TuneName, p.Index), 2);
-
             await UpdateDisplayAsync();
         }
 
@@ -226,11 +241,12 @@ namespace QSBT1_Streamdeck.Actions
             var displays = new List<TuneDialRenderer.ParamDisplay>();
             for (int i = 0; i < _params.Count; i++)
             {
+                bool sel = !OnHeader && i == _selectedParam;
                 var p = _params[i];
                 displays.Add(new TuneDialRenderer.ParamDisplay(
-                    p.Label, p.Value, p.Min, p.Max, _enabled, Selected: i == _selectedParam));
+                    p.Label, p.Value, p.Min, p.Max, _enabled, Selected: sel));
             }
-            string img = TuneDialRenderer.RenderStatus(_s.TuneName, _enabled, displays);
+            string img = TuneDialRenderer.RenderStatus(_s.TuneName, _enabled, displays, headerSelected: OnHeader);
             await Connection.SetImageAsync(img);
         }
     }

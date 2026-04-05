@@ -1,0 +1,174 @@
+@font-face {
+  font-family: 'Eurostile';
+  src: local('Eurostile'), local('EurostileBold'), local('eurostile');
+}
+
+:root {
+  --orange: #FD890D;
+  --blue:   #5DB3E2;
+  --bg:     #1a1a1a;
+  --bg2:    #242424;
+  --sep:    #333;
+  --dim:    #888;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  background: var(--bg);
+  color: var(--orange);
+  font-family: 'Eurostile', 'Arial Narrow', Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+}
+
+/* ── Masquer le champ Title natif Stream Deck ── */
+.sdpi-item:has(> .sdpi-item-label[for="title"]),
+.sdpi-item:has(> input[type="text"][id*="title"]),
+[id="sdpi-title-row"],
+.sdpi-title-row,
+#sdpi-title-row {
+  display: none !important;
+}
+
+/* Cibler via le wrapper sdpi si le css sdpi est chargé */
+.sdpi-wrapper > div:first-of-type.sdpi-item {
+  display: none !important;
+}
+
+.pi-wrapper {
+  padding: 10px 10px;
+}
+
+.pi-title {
+  font-family: 'Eurostile', 'Arial Narrow', Arial, sans-serif;
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--orange);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin: 0 0 10px 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--orange);
+}
+
+.pi-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+.pi-label {
+  color: var(--orange);
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  min-width: 70px;
+  flex-shrink: 0;
+}
+
+.pi-input, .pi-select {
+  flex: 1;
+  background: #111;
+  border: 1px solid var(--blue);
+  border-radius: 3px;
+  color: var(--blue);
+  font-family: 'Eurostile', 'Arial Narrow', Arial, sans-serif;
+  font-size: 11px;
+  padding: 4px 7px;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+
+.pi-input:focus, .pi-select:focus {
+  border-color: var(--orange);
+  color: var(--orange);
+}
+
+.pi-select option {
+  background: #111;
+  color: var(--blue);
+}
+
+.pi-button {
+  background: #111;
+  border: 1px solid var(--orange);
+  border-radius: 3px;
+  color: var(--orange);
+  font-family: 'Eurostile', 'Arial Narrow', Arial, sans-serif;
+  font-size: 10px;
+  padding: 4px 10px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.pi-button:hover { background: #2a1800; }
+
+.pi-button.blue {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.pi-button.blue:hover { background: #001a2a; }
+
+.pi-sep {
+  border: none;
+  border-top: 1px solid var(--sep);
+  margin: 10px 0;
+}
+
+.pi-desc {
+  color: var(--dim);
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.pi-desc .o { color: var(--orange); font-weight: bold; }
+.pi-desc .b { color: var(--blue); }
+
+.pi-status {
+  font-size: 10px;
+  color: var(--dim);
+  margin-top: 4px;
+  min-height: 14px;
+}
+
+.pi-status.ok  { color: #4caf50; }
+.pi-status.err { color: #f44336; }
+
+.pi-branding {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.pi-branding img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--orange);
+}
+
+.pi-branding-text {
+  font-size: 10px;
+  color: var(--dim);
+  line-height: 1.5;
+}
+
+.pi-branding-text a {
+  color: var(--orange);
+  text-decoration: none;
+}
+
+.pi-branding-text a.blue { color: var(--blue); }
+
+.pi-links {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}

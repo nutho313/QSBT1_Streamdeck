@@ -118,17 +118,19 @@ namespace QSBT1_Streamdeck.Actions
             if (_profiles.Count == 0)
             {
                 await Connection.SetImageAsync(
-                    TuneDialRenderer.RenderProfileButton("—", "—", false));
+                    TuneDialRenderer.RenderProfileButton("—", "No profiles", "—", false));
                 return;
             }
 
-            var active  = _activeIdx < _profiles.Count ? _profiles[_activeIdx] : null;
-            var nextIdx = (_activeIdx + 1) % _profiles.Count;
-            var next    = nextIdx < _profiles.Count ? _profiles[nextIdx] : null;
+            int count   = _profiles.Count;
+            var active  = _profiles[_activeIdx];
+            var prevIdx = (_activeIdx - 1 + count) % count;
+            var nextIdx = (_activeIdx + 1) % count;
 
             string img = TuneDialRenderer.RenderProfileButton(
-                active?.Name ?? "—",
-                next?.Name   ?? "—",
+                _profiles[prevIdx].Name,
+                active.Name,
+                _profiles[nextIdx].Name,
                 true);
             await Connection.SetImageAsync(img);
         }

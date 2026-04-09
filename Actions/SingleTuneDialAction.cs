@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 using BarRaider.SdTools;
 using BarRaider.SdTools.Payloads;
+using Newtonsoft.Json.Linq;
 using QSBT1_Streamdeck.QSApi;
 
 namespace QSBT1_Streamdeck.Actions
 {
-    [PluginActionId("ch.nutho313.qsbt1.singletune")]
-    public class SingleTuneAction : KeypadBase
+    [PluginActionId("ch.nutho313.qsbt1.singletunedin")]
+    public class SingleTuneDialAction : KeyAndEncoderBase
     {
         private SingleTuneSettings _s               = new();
         private QSApiClient?       _qsApi;
@@ -18,29 +18,15 @@ namespace QSBT1_Streamdeck.Actions
         private int                _tickCount       = 0;
         private int                _activeProfileId = 0;
 
-        // Param affiché
-        private string  _paramLabel = "";
-        private int     _paramIndex = 0;
-        private double  _paramValue = 0;
-        private double  _paramMin   = 0;
-        private double  _paramMax   = 2.5;
-        private double  _paramStep  = 0.1;
+        private string   _paramLabel = "";
+        private int      _paramIndex = 0;
+        private double   _paramValue = 0;
+        private double   _paramMin   = 0;
+        private double   _paramMax   = 2.5;
+        private double   _paramStep  = 0.1;
+        private double[] _allValues  = new double[6];
 
-        // Toutes les valeurs du tune (pour ne pas écraser les autres params)
-        private double[] _allValues = new double[6];
-
-        // Double appui
-        private DateTime _lastShortPress  = DateTime.MinValue;
-        private const int ConsecMs        = 400;
-        private CancellationTokenSource? _pendingCts;
-
-        // Long press
-        private DateTime _keyDownTime      = DateTime.MinValue;
-        private const int LongPressMs      = 1000;
-        private bool      _longPressHandled = false;
-        private CancellationTokenSource? _longPressCts;
-
-        public SingleTuneAction(SDConnection conn, InitialPayload payload) : base(conn, payload)
+        public SingleTuneDialAction(SDConnection conn, InitialPayload payload) : base(conn, payload)
         {
             _ = Connection.SetTitleAsync(" ");
             if (payload.Settings != null && payload.Settings.Count > 0)
@@ -66,106 +52,44 @@ namespace QSBT1_Streamdeck.Actions
             _ = RefreshAsync();
         }
 
-        // ── Key handling ──────────────────────────────────────────────────────
-        public override void KeyPressed(KeyPayload payload)
-        {
-            _keyDownTime      = DateTime.Now;
-            _longPressHandled = false;
-            _longPressCts?.Cancel();
-            _longPressCts = new CancellationTokenSource();
-            var cts = _longPressCts;
+        // ── Encoder ──────────────────────────────────────────────────────────
+        public override void DialRotate(DialRotatePayload payload) => _ = AdjustAsync(payload.Ticks * _paramStep);
+        public override void DialDown(DialPayload payload)         => _ = ToggleEnabledAsync();
+        public override void DialUp(DialPayload payload)           { }
+        public override void TouchPress(TouchpadPressPayload payload) { }
 
-            Task.Run(async () =>
-            {
-                try
-                {
-                    await Task.Delay(LongPressMs, cts.Token);
-                    _longPressHandled = true;
-                    _pendingCts?.Cancel();
-                    _ = ToggleEnabledAsync();
-                }
-                catch (TaskCanceledException) { }
-            });
-        }
-
-        public override void KeyReleased(KeyPayload payload)
-        {
-            _longPressCts?.Cancel();
-
-            if (_longPressHandled) return;
-
-            var held = (DateTime.Now - _keyDownTime).TotalMilliseconds;
-            if (held >= LongPressMs) return;
-
-            // Double appui avec délai
-            var sinceLastShort = (DateTime.Now - _lastShortPress).TotalMilliseconds;
-            if (sinceLastShort < ConsecMs)
-            {
-                _pendingCts?.Cancel();
-                _lastShortPress = DateTime.MinValue;
-                _ = AdjustAsync(-_paramStep);
-            }
-            else
-            {
-                _lastShortPress = DateTime.Now;
-                _pendingCts?.Cancel();
-                _pendingCts = new CancellationTokenSource();
-                var cts = _pendingCts;
-                Task.Run(async () =>
-                {
-                    try
-                    {
-                        await Task.Delay(ConsecMs, cts.Token);
-                        _ = AdjustAsync(+_paramStep);
-                    }
-                    catch (TaskCanceledException) { }
-                });
-            }
-        }
+        // Keypad fallback
+        public override void KeyPressed(KeyPayload payload)  => _ = AdjustAsync(+_paramStep);
+        public override void KeyReleased(KeyPayload payload) { }
 
         public override void OnTick()
         {
             _tickCount++;
-            if (_tickCount >= 3) { _tickCount = 0; if (!_isBusy) _ = RefreshAsync(); }
+            if (_tickCount >= 1) { _tickCount = 0; if (!_isBusy) _ = RefreshAsync(); }
         }
 
-        public override void Dispose()
-        {
-            _longPressCts?.Cancel();
-            _pendingCts?.Cancel();
-        }
+        public override void Dispose() { }
 
         // ── Helpers ──────────────────────────────────────────────────────────
         private void BuildParam()
         {
-            _paramLabel = "";
-            _paramIndex = _s.ParamIndex;
-            _paramMin   = 0;
-            _paramMax   = 2.5;
-            _paramStep  = 0.1;
-
+            _paramLabel = ""; _paramIndex = _s.ParamIndex;
+            _paramMin = 0; _paramMax = 2.5; _paramStep = 0.1;
             foreach (var p in TuneCatalog.All)
             {
                 if (p.TuneName == _s.TuneName && p.TuneGroup == _s.TuneGroup && p.ParamIndex == _s.ParamIndex)
                 {
-                    _paramLabel = p.ParamLabel;
-                    _paramIndex = p.ParamIndex;
-                    _paramMin   = p.Min;
-                    _paramMax   = p.Max;
-                    _paramStep  = p.Step;
+                    _paramLabel = p.ParamLabel; _paramIndex = p.ParamIndex;
+                    _paramMin = p.Min; _paramMax = p.Max; _paramStep = p.Step;
                     return;
                 }
             }
-            // Fallback premier param
             foreach (var p in TuneCatalog.All)
             {
                 if (p.TuneName == _s.TuneName && p.TuneGroup == _s.TuneGroup)
                 {
-                    _paramLabel = p.ParamLabel;
-                    _paramIndex = p.ParamIndex;
-                    _paramMin   = p.Min;
-                    _paramMax   = p.Max;
-                    _paramStep  = p.Step;
+                    _paramLabel = p.ParamLabel; _paramIndex = p.ParamIndex;
+                    _paramMin = p.Min; _paramMax = p.Max; _paramStep = p.Step;
                     return;
                 }
             }
@@ -200,21 +124,13 @@ namespace QSBT1_Streamdeck.Actions
             try
             {
                 await EnsureProfileIdAsync();
-
-                // Mettre à jour la valeur du param sélectionné
                 _paramValue = Math.Clamp(Math.Round(_paramValue + delta, 2), _paramMin, _paramMax);
-
-                // Mettre à jour dans le tableau complet des valeurs
                 if (_paramIndex < _allValues.Length)
                     _allValues[_paramIndex] = _paramValue;
-
-                // Envoyer toutes les valeurs pour ne pas écraser les autres params
-                await _qsApi.EditTuneAsync(
-                    _activeProfileId, _s.TuneGroup, _s.TuneName,
+                await _qsApi.EditTuneAsync(_activeProfileId, _s.TuneGroup, _s.TuneName,
                     _allValues.Length > 0 ? _allValues[0] : 0,
                     _allValues.Length > 1 ? _allValues[1] : 0,
                     _allValues.Length > 2 ? _allValues[2] : 0);
-
                 await UpdateDisplayAsync();
             }
             finally { _isBusy = false; }
@@ -227,26 +143,19 @@ namespace QSBT1_Streamdeck.Actions
             if (_activeProfileId <= 0) return;
             var json = await _qsApi.GetProfileDetailsAsync(_activeProfileId);
             if (json == null) return;
-
             _enabled = QSApiClient.GetTuneEnabled(json, _s.TuneName);
-
-            // Lire toutes les valeurs du tune
             for (int i = 0; i < _allValues.Length; i++)
                 _allValues[i] = Math.Round(QSApiClient.GetTuneValue(json, _s.TuneName, i), 2);
-
-            // Valeur du param affiché
             _paramValue = _paramIndex < _allValues.Length ? _allValues[_paramIndex] : 0;
-
             await UpdateDisplayAsync();
         }
 
         private async Task UpdateDisplayAsync()
         {
-            string img = TuneDialRenderer.RenderSingle(
-                _s.TuneName, _enabled,
-                _paramLabel, _paramValue,
-                _paramMin, _paramMax);
-            await Connection.SetImageAsync(img);
+            string img = TuneDialRenderer.RenderSingleDial(
+                _s.TuneName, _enabled, _paramLabel, _paramValue, _paramMin, _paramMax);
+            await Connection.SetTitleAsync(" ");
+            await Connection.SetFeedbackAsync(new JObject { ["full-canvas"] = img });
         }
     }
 }

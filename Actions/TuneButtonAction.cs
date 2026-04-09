@@ -31,6 +31,7 @@ namespace QSBT1_Streamdeck.Actions
         // Long press
         private DateTime          _keyDownTime     = DateTime.MinValue;
         private const int         LongPressMs      = 1000;
+        private bool              _longPressHandled = false;
         private CancellationTokenSource? _longPressCts;
 
         private class ParamState
@@ -73,7 +74,8 @@ namespace QSBT1_Streamdeck.Actions
         // ── Key handling ──────────────────────────────────────────────────────
         public override void KeyPressed(KeyPayload payload)
         {
-            _keyDownTime = DateTime.Now;
+            _keyDownTime      = DateTime.Now;
+            _longPressHandled = false;
             _longPressCts?.Cancel();
             _longPressCts = new CancellationTokenSource();
             var cts = _longPressCts;
@@ -83,8 +85,8 @@ namespace QSBT1_Streamdeck.Actions
                 try
                 {
                     await Task.Delay(LongPressMs, cts.Token);
-                    // Long press : cycle param (ou header)
-                    _pendingCts?.Cancel(); // annuler tout appui court en attente
+                    _longPressHandled = true;
+                    _pendingCts?.Cancel();
                     CycleParam();
                     await UpdateDisplayAsync();
                 }
@@ -94,10 +96,13 @@ namespace QSBT1_Streamdeck.Actions
 
         public override void KeyReleased(KeyPayload payload)
         {
-            var held = (DateTime.Now - _keyDownTime).TotalMilliseconds;
             _longPressCts?.Cancel();
 
-            if (held >= LongPressMs) return; // long press déjà géré
+            // Si long press déjà géré, ignorer
+            if (_longPressHandled) return;
+
+            var held = (DateTime.Now - _keyDownTime).TotalMilliseconds;
+            if (held >= LongPressMs) return;
 
             // Si on est sur le header : appui court = toggle ON/OFF immédiat
             if (OnHeader)

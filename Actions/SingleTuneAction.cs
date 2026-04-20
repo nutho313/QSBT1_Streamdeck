@@ -29,9 +29,9 @@ namespace QSBT1_Streamdeck.Actions
         // Toutes les valeurs du tune (pour ne pas écraser les autres params)
         private double[] _allValues = new double[6];
 
-        // Double appui
-        private DateTime _lastShortPress  = DateTime.MinValue;
-        private const int ConsecMs        = 400;
+        // Multi-appui : impair = +step, pair = -step, fenêtre 250ms
+        private int       _pressCount     = 0;
+        private const int ConsecMs        = 250;
         private CancellationTokenSource? _pendingCts;
 
         // Long press
@@ -97,30 +97,24 @@ namespace QSBT1_Streamdeck.Actions
             var held = (DateTime.Now - _keyDownTime).TotalMilliseconds;
             if (held >= LongPressMs) return;
 
-            // Double appui avec délai
-            var sinceLastShort = (DateTime.Now - _lastShortPress).TotalMilliseconds;
-            if (sinceLastShort < ConsecMs)
+            // Multi-appui : impair=+step, pair=-step, résultat après 250ms
+            _pressCount++;
+            _pendingCts?.Cancel();
+            _pendingCts = new CancellationTokenSource();
+            var cts = _pendingCts;
+            int count = _pressCount;
+            Task.Run(async () =>
             {
-                _pendingCts?.Cancel();
-                _lastShortPress = DateTime.MinValue;
-                _ = AdjustAsync(-_paramStep);
-            }
-            else
-            {
-                _lastShortPress = DateTime.Now;
-                _pendingCts?.Cancel();
-                _pendingCts = new CancellationTokenSource();
-                var cts = _pendingCts;
-                Task.Run(async () =>
+                try
                 {
-                    try
-                    {
-                        await Task.Delay(ConsecMs, cts.Token);
-                        _ = AdjustAsync(+_paramStep);
-                    }
-                    catch (TaskCanceledException) { }
-                });
-            }
+                    await Task.Delay(ConsecMs, cts.Token);
+                    // 1 appui = +step | N appuis = -(N-1)*step
+                    double delta = (count == 1) ? +_paramStep : -(count - 1) * _paramStep;
+                    _ = AdjustAsync(delta);
+                    _pressCount = 0;
+                }
+                catch (TaskCanceledException) { }
+            });
         }
 
         public override void OnTick()

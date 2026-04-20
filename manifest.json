@@ -1,6 +1,6 @@
 {
   "Name": "nutho313 QSBT1 ControlMapper",
-  "Version": "0.991.0.0",
+  "Version": "1.0.0.0",
   "Author": "nutho313",
   "Actions": [
     {
@@ -121,6 +121,90 @@
         }
       ],
       "PropertyInspectorPath": "pi/plugin_global.html"
+    },
+    {
+      "Name": "Overall Gain",
+      "UUID": "ch.nutho313.qsbt1.overallgain",
+      "Icon": "images/action_button_single",
+      "Tooltip": "Adjust all physical force gains simultaneously. Hold 1s = reset to 1.0",
+      "SupportedInMultiActions": false,
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "images/action_button_single",
+          "Title": " "
+        }
+      ],
+      "PropertyInspectorPath": "pi/overall.html"
+    },
+    {
+      "Name": "Overall Gain Dial",
+      "UUID": "ch.nutho313.qsbt1.overallgaindial",
+      "Icon": "images/action_dial_single",
+      "Tooltip": "Rotate = adjust all force gains | Push = reset to 1.0",
+      "SupportedInMultiActions": false,
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "Encoder": {
+        "layout": "$A0",
+        "TriggerDescription": {
+          "Rotate": "CCW = -0.1 all  |  CW = +0.1 all",
+          "Push": "Reset all gains to 1.0"
+        }
+      },
+      "States": [
+        {
+          "Image": "images/action_dial_single",
+          "Title": " "
+        }
+      ],
+      "PropertyInspectorPath": "pi/overall.html"
+    },
+    {
+      "Name": "Overall FX",
+      "UUID": "ch.nutho313.qsbt1.overallfx",
+      "Icon": "images/action_button_single",
+      "Tooltip": "Adjust all vibration effects simultaneously. Hold 1s = reset to 1.0",
+      "SupportedInMultiActions": false,
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "images/action_button_single",
+          "Title": " "
+        }
+      ],
+      "PropertyInspectorPath": "pi/overall.html"
+    },
+    {
+      "Name": "Overall FX Dial",
+      "UUID": "ch.nutho313.qsbt1.overallfxdial",
+      "Icon": "images/action_dial_single",
+      "Tooltip": "Rotate = adjust all vibration effects | Push = reset to 1.0",
+      "SupportedInMultiActions": false,
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "Encoder": {
+        "layout": "$A0",
+        "TriggerDescription": {
+          "Rotate": "CCW = -0.1 all  |  CW = +0.1 all",
+          "Push": "Reset all effects to 1.0"
+        }
+      },
+      "States": [
+        {
+          "Image": "images/action_dial_single",
+          "Title": " "
+        }
+      ],
+      "PropertyInspectorPath": "pi/overall.html"
     }
   ],
   "Category": "nutho313 QSBT1",

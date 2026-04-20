@@ -17,6 +17,15 @@
     .desc { color: var(--dim); font-size: 10px; line-height: 1.7; }
     .desc .o { color: var(--o); font-weight: bold; }
     .desc .b { color: var(--b); }
+
+    /* Color coding optgroups */
+    optgroup.grp-gain       { background: #222; color: #ccc; }
+    optgroup.grp-fx         { background: #2e2e2e; color: #aaa; }
+    option.hdr-gain         { background: #1a1a1a; color: #fff; font-weight: bold; }
+    option.sub-gain         { background: #111; color: #999; padding-left: 12px; }
+    option.hdr-fx           { background: #2a2a2a; color: #ddd; font-weight: bold; }
+    option.sub-fx           { background: #1e1e1e; color: #777; padding-left: 12px; }
+    option.normal           { background: #111; color: var(--b); }
   </style>
 </head>
 <body>
@@ -26,7 +35,7 @@
 
   <div class="row">
     <span class="label">Tune</span>
-    <select id="tuneName"></select>
+    <select id="tuneName" size="1"></select>
   </div>
 
   <div class="row">
@@ -38,8 +47,7 @@
 
   <div class="desc">
     <span class="o">1 press</span> → +step &nbsp;·&nbsp; <span class="o">2 presses</span> → −step<br/>
-    <span class="o">Hold 1s</span> → toggle header ON/OFF<br/>
-    <span class="b">Header selected</span> → press = toggle tune ON/OFF
+    <span class="o">Hold 1s</span> → toggle ON/OFF &nbsp;·&nbsp; <span class="b">OVR: Hold = reset to 1.0</span>
   </div>
 
 </div>
@@ -52,22 +60,23 @@ function connectElgatoStreamDeckSocket(port, pluginUUID, registerEvent, info, ac
   websocket = new WebSocket('ws://127.0.0.1:' + port);
   websocket.onopen = () => {
     websocket.send(JSON.stringify({ event: registerEvent, uuid }));
-    loadSettings();
+    buildTuneDropdown();
+    const selectedTune = document.getElementById('tuneName').value;
+    populateParams(selectedTune, settings.ParamIndex);
   };
 }
 
-const catalog = [
+// ── Catalog ────────────────────────────────────────────────────────────────
+const GAIN_TUNES = [
   {name:"Braking",               group:12, params:[{label:"Gain",idx:0},{label:"Sharpness",idx:1},{label:"Deadzone",idx:2}]},
   {name:"Acceleration",          group:12, params:[{label:"Gain",idx:0},{label:"Sharpness",idx:1},{label:"Deadzone",idx:2}]},
   {name:"Sideways Acceleration", group:12, params:[{label:"Gain",idx:0},{label:"Sharpness",idx:1},{label:"Deadzone",idx:2}]},
   {name:"Centrifugal Force",     group:12, params:[{label:"Gain",idx:0},{label:"Sharpness",idx:1},{label:"Deadzone",idx:2}]},
-  {name:"Bounds",                group:12, params:[{label:"Neutral",idx:0},{label:"Maximum",idx:1}]},
   {name:"Vertical G-Force",      group:12, params:[{label:"Gain",idx:0},{label:"Sharpness",idx:1}]},
-  {name:"Side Slip",             group:12, params:[{label:"Threshold",idx:0},{label:"Frequency",idx:1},{label:"Intensity",idx:2}]},
   {name:"Road Harshness",        group:12, params:[{label:"Gain",idx:0},{label:"Sharpness",idx:1}]},
-  {name:"Pre-Impact Protection", group:12, params:[{label:"Long.",idx:0},{label:"Lateral",idx:1},{label:"Duration",idx:2}]},
-  {name:"Violent Movement Threshold",        group:2, params:[{label:"Threshold",idx:0}]},
-  {name:"Violent Movement Suppression Time", group:2, params:[{label:"Duration",idx:0}]},
+];
+
+const FX_TUNES = [
   {name:"Rev Limiter",             group:17, params:[{label:"Frequency",idx:0},{label:"Intensity",idx:1}]},
   {name:"Gear Change Effect",      group:17, params:[{label:"Duration",idx:0},{label:"Downshift",idx:1},{label:"Upshift",idx:2}]},
   {name:"Wheel Forward Slip/Lock", group:17, params:[{label:"Frequency",idx:0},{label:"Intensity",idx:1}]},
@@ -79,22 +88,60 @@ const catalog = [
   {name:"LFE Enhancement",         group:17, params:[{label:"Gain",idx:0},{label:"Sharpness",idx:1}]},
 ];
 
-function loadSettings() {
-  const tuneSel = document.getElementById('tuneName');
-  tuneSel.innerHTML = '';
-  catalog.forEach(t => {
+const NORMAL_TUNES = [
+  {name:"Bounds",                group:12, params:[{label:"Neutral",idx:0},{label:"Maximum",idx:1}]},
+  {name:"Side Slip",             group:12, params:[{label:"Threshold",idx:0},{label:"Frequency",idx:1},{label:"Intensity",idx:2}]},
+  {name:"Pre-Impact Protection", group:12, params:[{label:"Long.",idx:0},{label:"Lateral",idx:1},{label:"Duration",idx:2}]},
+  {name:"Violent Movement Threshold",        group:2, params:[{label:"Threshold",idx:0}]},
+  {name:"Violent Movement Suppression Time", group:2, params:[{label:"Duration",idx:0}]},
+];
+
+// Overall virtuals
+const OVERALL_ENTRIES = [
+  {name:"Overall Gain", group:99, isOverall:true, overallType:"gain", params:[{label:"Avg Gain",idx:0}]},
+  {name:"Overall FX",   group:98, isOverall:true, overallType:"fx",   params:[{label:"Avg Effect",idx:0}]},
+];
+
+const ALL_CATALOG = [...OVERALL_ENTRIES, ...GAIN_TUNES, ...FX_TUNES, ...NORMAL_TUNES];
+
+function buildTuneDropdown() {
+  const sel = document.getElementById('tuneName');
+  sel.innerHTML = '';
+
+  function addOption(value, text, cls) {
     const o = document.createElement('option');
-    o.value = t.name; o.text = t.name;
-    if (t.name === settings.TuneName) o.selected = true;
-    tuneSel.appendChild(o);
-  });
-  // Utilise le tune actuellement sélectionné dans le dropdown
-  const selectedTune = tuneSel.value;
-  populateParams(selectedTune, settings.ParamIndex);
+    o.value = value; o.text = text; o.className = cls;
+    if (value === settings.TuneName) o.selected = true;
+    sel.appendChild(o);
+  }
+
+  function addSep(text, cls) {
+    const o = document.createElement('option');
+    o.disabled = true; o.text = text; o.className = cls;
+    sel.appendChild(o);
+  }
+
+  // Overall
+  addSep('── Overall ──────────────────', 'hdr-gain');
+  OVERALL_ENTRIES.forEach(t => addOption(t.name, '⬡ ' + t.name, t.overallType === 'gain' ? 'hdr-gain' : 'hdr-fx'));
+
+  // Gain group
+  addSep('── Forces (Gain) ─────────────', 'hdr-gain');
+  GAIN_TUNES.forEach(t => addOption(t.name, '  ' + t.name, 'sub-gain'));
+
+  // FX group
+  addSep('── Effects ───────────────────', 'hdr-fx');
+  FX_TUNES.forEach(t => addOption(t.name, '  ' + t.name, 'sub-fx'));
+
+  // Normal
+  addSep('── Other ─────────────────────', 'normal');
+  NORMAL_TUNES.forEach(t => addOption(t.name, t.name, 'normal'));
+
+  populateParams(sel.value, settings.ParamIndex);
 }
 
 function populateParams(tuneName, selectedIdx) {
-  const entry  = catalog.find(t => t.name === tuneName);
+  const entry  = ALL_CATALOG.find(t => t.name === tuneName);
   const params = entry ? entry.params : [];
   const sel    = document.getElementById('paramIndex');
   sel.innerHTML = '';
@@ -114,10 +161,14 @@ function onTuneChange() {
 
 function save() {
   const name  = document.getElementById('tuneName').value;
-  const entry = catalog.find(t => t.name === name) || { group: 12 };
+  const entry = ALL_CATALOG.find(t => t.name === name) || { group: 12 };
   const pIdx  = parseInt(document.getElementById('paramIndex').value) || 0;
   websocket.send(JSON.stringify({ event: 'setSettings', context: uuid, payload: {
-    TuneName: name, TuneGroup: entry.group, ParamIndex: pIdx,
+    TuneName:    name,
+    TuneGroup:   entry.group,
+    ParamIndex:  pIdx,
+    IsOverall:   entry.isOverall || false,
+    OverallType: entry.overallType || '',
   }}));
 }
 

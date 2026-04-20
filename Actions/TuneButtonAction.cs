@@ -23,10 +23,10 @@ namespace QSBT1_Streamdeck.Actions
         private int               _selectedParam   = 0;
         private bool              OnHeader         => _params.Count > 0 && _selectedParam >= _params.Count;
 
-        // Gestion double appui
-        private DateTime          _lastShortPress  = DateTime.MinValue;
-        private const int         ConsecMs         = 400; // fenêtre double appui
-        private CancellationTokenSource? _pendingCts; // délai avant d'envoyer +step
+        // Gestion multi-appui
+        private int               _pressCount      = 0;
+        private const int         ConsecMs         = 250;
+        private CancellationTokenSource? _pendingCts;
 
         // Long press
         private DateTime          _keyDownTime     = DateTime.MinValue;
@@ -111,33 +111,23 @@ namespace QSBT1_Streamdeck.Actions
                 return;
             }
 
-            // Logique double appui avec délai
-            var sinceLastShort = (DateTime.Now - _lastShortPress).TotalMilliseconds;
-
-            if (sinceLastShort < ConsecMs)
+            // Logique multi-appui : 1 appui = +step | N appuis = -(N-1)*step
+            _pressCount++;
+            _pendingCts?.Cancel();
+            _pendingCts = new CancellationTokenSource();
+            var cts = _pendingCts;
+            int count = _pressCount;
+            Task.Run(async () =>
             {
-                // 2ème appui détecté → annuler le +step en attente, envoyer -step
-                _pendingCts?.Cancel();
-                _lastShortPress = DateTime.MinValue;
-                _ = AdjustAsync(-GetStep());
-            }
-            else
-            {
-                // 1er appui → attendre ConsecMs avant d'envoyer +step
-                _lastShortPress = DateTime.Now;
-                _pendingCts?.Cancel();
-                _pendingCts = new CancellationTokenSource();
-                var cts = _pendingCts;
-                Task.Run(async () =>
+                try
                 {
-                    try
-                    {
-                        await Task.Delay(ConsecMs, cts.Token);
-                        _ = AdjustAsync(+GetStep());
-                    }
-                    catch (TaskCanceledException) { }
-                });
-            }
+                    await Task.Delay(ConsecMs, cts.Token);
+                    double delta = (count == 1) ? +GetStep() : -(count - 1) * GetStep();
+                    _ = AdjustAsync(delta);
+                    _pressCount = 0;
+                }
+                catch (TaskCanceledException) { }
+            });
         }
 
         public override void OnTick()

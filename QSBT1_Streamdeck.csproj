@@ -4,9 +4,9 @@
     <TargetFramework>net8.0</TargetFramework>
     <AssemblyName>nutho313.QSBT1_Streamdeck</AssemblyName>
     <RootNamespace>QSBT1_Streamdeck</RootNamespace>
-    <Version>0.991.0.0</Version>
-    <AssemblyVersion>0.991.0.0</AssemblyVersion>
-    <FileVersion>0.991.0.0</FileVersion>
+    <Version>1.0.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Tune</title>
+  <style>
+    :root { --o: #FD890D; --b: #5DB3E2; --bg: #1a1a1a; --dim: #888; --sep: #333; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background: var(--bg); color: var(--o); font-family: 'Arial Narrow', Arial, sans-serif; font-size: 12px; }
+    .wrap { padding: 12px 10px; }
+    .title { color: var(--o); font-size: 11px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid var(--o); }
+    .row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+    .label { color: var(--o); font-size: 10px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; min-width: 65px; flex-shrink: 0; }
+    select { flex: 1; background: #111; border: 1px solid var(--b); border-radius: 3px; color: var(--b); font-size: 11px; padding: 4px 7px; outline: none; }
+    select:focus { border-color: var(--o); }
+    .sep { border: none; border-top: 1px solid var(--sep); margin: 10px 0; }
+    .desc { color: var(--dim); font-size: 10px; line-height: 1.7; }
+    .desc .o { color: var(--o); font-weight: bold; }
+    .desc .b { color: var(--b); }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="title">Multi Tune</div>
+  <div class="row">
+    <span class="label">Tune</span>
+    <select id="tuneName"></select>
+  </div>
+  <hr class="sep"/>
+  <div class="desc">
+    <span class="o">Rotate</span> → adjust &nbsp;·&nbsp; <span class="o">Push</span> → toggle ON/OFF<br/>
+    <span class="b">Touch</span> → cycle parameter
+  </div>
+</div>
+<script>
+var websocket, uuid, settings = {};
+
+function connectElgatoStreamDeckSocket(port, pluginUUID, registerEvent, info, actionInfo_) {
+  uuid     = pluginUUID;
+  settings = JSON.parse(actionInfo_).payload.settings || {};
+  websocket = new WebSocket('ws://127.0.0.1:' + port);
+  websocket.onopen = () => {
+    websocket.send(JSON.stringify({ event: registerEvent, uuid }));
+    buildTuneDropdown();
+  };
+}
+
+const GAIN_TUNES = [
+  {name:"Braking",               group:12},{name:"Acceleration",          group:12},
+  {name:"Sideways Acceleration", group:12},{name:"Centrifugal Force",     group:12},
+  {name:"Vertical G-Force",      group:12},{name:"Road Harshness",        group:12},
+];
+
+const FX_TUNES = [
+  {name:"Rev Limiter",             group:17},{name:"Gear Change Effect",      group:17},
+  {name:"Wheel Forward Slip/Lock", group:17},{name:"Wheel Slip Angle",        group:17},
+  {name:"ABS Active",              group:17},{name:"Rumble Strips Frequency", group:17},
+  {name:"Rumble Strips Intensity", group:17},{name:"Engine Vibration Extra",  group:17},
+  {name:"Engine Vibration Extra",  group:17},
+];
+
+const OTHER_TUNES = [
+  {name:"Bounds",                group:12},{name:"Side Slip",             group:12},
+  {name:"Pre-Impact Protection", group:12},
+  {name:"Violent Movement Threshold",        group:2},
+  {name:"Violent Movement Suppression Time", group:2},
+];
+
+const ALL_CATALOG = [...GAIN_TUNES, ...FX_TUNES, ...OTHER_TUNES];
+const O = '#FD890D', B = '#5DB3E2';
+
+function buildTuneDropdown() {
+  const sel = document.getElementById('tuneName');
+  sel.innerHTML = '';
+
+  function sep(text, bg, color) {
+    const o = document.createElement('option');
+    o.disabled = true; o.text = text;
+    o.style.cssText = `background:${bg};color:${color};font-size:9px;font-weight:bold;`;
+    sel.appendChild(o);
+  }
+
+  function opt(tune, bg, color, prefix='') {
+    const o = document.createElement('option');
+    o.value = tune.name; o.text = prefix + tune.name;
+    o.style.cssText = `background:${bg};color:${color};`;
+    if (tune.name === settings.TuneName) o.selected = true;
+    sel.appendChild(o);
+  }
+
+  // Section 1 : Forces (Gain) — Orange
+  sep('── Forces (Gain) ─────────────', '#2a1400', O);
+  GAIN_TUNES.forEach(t => opt(t, '#1a0a00', B, '  '));
+
+  // Section 2 : Effects — Bleu
+  sep('── Effects ───────────────────', '#001a2a', B);
+  FX_TUNES.forEach(t => opt(t, '#001020', O, '  '));
+
+  // Section 3 : Other — Blanc
+  sep('── Other ─────────────────────', '#111', '#666');
+  OTHER_TUNES.forEach(t => opt(t, '#111', '#fff', ''));
+}
+
+function save() {
+  const name  = document.getElementById('tuneName').value;
+  const entry = ALL_CATALOG.find(t => t.name === name) || { group: 12 };
+  websocket.send(JSON.stringify({ event: 'setSettings', context: uuid, payload: {
+    TuneName:  name,
+    TuneGroup: entry.group,
+  }}));
+}
+
+document.getElementById('tuneName').addEventListener('change', save);
+</script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Overall</title>
+  <style>
+    :root { --o: #FD890D; --b: #5DB3E2; --bg: #1a1a1a; --dim: #888; --sep: #333; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background: var(--bg); color: var(--o); font-family: 'Arial Narrow', Arial, sans-serif; font-size: 12px; }
+    .wrap { padding: 12px 10px; }
+    .title { color: var(--o); font-size: 11px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid var(--o); }
+    .sep { border: none; border-top: 1px solid var(--sep); margin: 10px 0; }
+    .desc { color: var(--dim); font-size: 10px; line-height: 1.8; }
+    .desc .o { color: var(--o); font-weight: bold; }
+    .desc .b { color: var(--b); }
+    .tunes { margin-top: 8px; }
+    .tune-item { font-size: 10px; color: #666; padding: 2px 0; padding-left: 8px; border-left: 2px solid #333; margin-bottom: 2px; }
+    .section-lbl { font-size: 10px; color: #aaa; font-weight: bold; margin: 6px 0 3px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="title" id="actionTitle">Overall</div>
+
+  <div class="desc">
+    <span class="o">1 press</span> → +0.1 on all<br/>
+    <span class="o">2 presses</span> → −0.1 on all<br/>
+    <span class="o">Hold 1s</span> → reset all to 1.0
+  </div>
+
+  <hr class="sep"/>
+
+  <div class="tunes" id="tuneList"></div>
+
+</div>
+<script>
+var websocket, uuid;
+
+const GAIN_TUNES = ["Braking","Acceleration","Sideways Acceleration","Centrifugal Force","Vertical G-Force","Road Harshness"];
+const FX_TUNES   = ["Rev Limiter","Wheel Forward Slip/Lock","Wheel Slip Angle","ABS Active","Rumble Strips Frequency","Rumble Strips Intensity","Engine Vibration Extra"];
+
+function connectElgatoStreamDeckSocket(port, pluginUUID, registerEvent, info, actionInfo_) {
+  uuid = pluginUUID;
+  const ai = JSON.parse(actionInfo_);
+  const uuid_action = ai.action || '';
+  websocket = new WebSocket('ws://127.0.0.1:' + port);
+  websocket.onopen = () => {
+    websocket.send(JSON.stringify({ event: registerEvent, uuid }));
+    const isGain = uuid_action.includes('overallgain');
+    document.getElementById('actionTitle').textContent = isGain ? 'Overall Gain' : 'Overall FX';
+    const tunes = isGain ? GAIN_TUNES : FX_TUNES;
+    const color = isGain ? '#555' : '#3a3a3a';
+    const list = document.getElementById('tuneList');
+    list.innerHTML = '<div class="section-lbl">Affects:</div>';
+    tunes.forEach(t => {
+      const d = document.createElement('div');
+      d.className = 'tune-item';
+      d.style.borderLeftColor = color;
+      d.textContent = t;
+      list.appendChild(d);
+    });
+  };
+}
+</script>
+</body>
+</html>
